@@ -1,0 +1,1028 @@
+AgriVision AI
+Expanded Master Technical Documentation
+Intelligent Agriculture and Crop Health Monitoring System
+DOCUMENT PURPOSE
+A single editable implementation reference for planning, building, testing, evaluating, and operating the AgriVision AI web application. It preserves the supplied SRS scope while clearly identifying recommended engineering detail that is not a source requirement.
+Prepared from the supplied AgriVision AI SRS and the previously generated master documentation.
+Document status: Expanded technical baseline. Source requirements remain authoritative; recommendations require project confirmation.
+Version: 2.0 | Date: 24 November 2026
+Document Control
+This section explains the authority and intended use of this document.
+Document item
+Value
+Product
+AgriVision AI – Intelligent Agriculture and Crop Health Monitoring System
+Project type
+AI/ML-based web application for an academic or final-year project
+Primary scope
+Plant disease detection, smart crop recommendation, and crop yield prediction
+Primary source
+Supplied SRS, including its final plant-disease-model addendum
+Baseline reference
+Previously generated AgriVision AI complete project documentation
+Audience
+Developers, ML engineers, testers, supervisors, evaluators, administrators, and agricultural users
+Authority model
+SRS requirements describe scope; this document adds labeled technical recommendations and open decisions
+Editable output
+Microsoft Word DOCX; headings, tables, and lists are editable
+How to Read This Document
+Source Requirement / SRS Position identifies scope, constraints, and terminology derived from the supplied SRS.
+Recommended Implementation Detail describes an engineering baseline selected to make the SRS buildable; it is not a claim that the SRS mandates the exact implementation.
+Open Decision / Confirm Before Build identifies a necessary decision that cannot safely be inferred from the source materials.
+Illustrative API fields and proposed database fields are implementation contracts, not claims about unknown source dataset columns.
+Core Source-Fidelity Rules
+Rule
+Applied interpretation
+Three-model maximum
+The initial product deploys no more than three trained ML models: one disease classifier, one crop recommender, and one yield regressor.
+Disease-model reconciliation
+Earlier SRS sections list EfficientNetB0 and MobileNetV2 as alternatives. The final SRS addendum selects ResNet-99-2; this document treats that addendum as the current selection while requiring confirmation of its exact implementation.
+Guidance boundary
+Agricultural guidance is retrieved from curated content or rules and must not introduce a fourth trained ML model.
+Yield schema boundary
+Yield inputs, categorical values, target, and unit must be derived from the finally selected yield dataset and its training pipeline; unsupported columns are not invented here.
+Performance boundary
+No accuracy, latency, capacity, or business outcome is guaranteed. Measurements must be produced and reported from actual validation and operational tests.
+Table of Contents
+Document Control
+How to Read This Document
+Core Source-Fidelity Rules
+Table of Contents
+1. Executive Summary
+Success Condition
+2. Scope, Objectives, and Product Boundaries
+In-Scope Capabilities
+Explicitly Outside Mandatory Initial Scope
+System Boundary
+3. Requirements Traceability and Model-Governance Constraint
+Model Inventory
+Disease-Model Reconciliation
+Requirement-to-Design Mapping
+4. Users, Roles, and Primary Use Cases
+Use Case: Plant Disease Detection
+Use Case: Crop Recommendation
+Use Case: Yield Prediction
+5. Functional Architecture and End-to-End Flow
+Logical Architecture
+Canonical Request Lifecycle
+Independence of the Three Services
+Suggested Repository Boundary
+6. Module Internals: Shared Inference Contract
+Model Release Package
+Shared Adapter Interface
+Training/Serving Parity
+Runtime Model Loading
+7. Plant Disease Detection: Plant Doctor
+Input Contract
+Inference Pipeline
+Result Presentation
+Dataset and Evaluation Discipline
+8. Smart Crop Recommendation: Crop Advisor
+Source-Defined Feature Set
+Processing Pipeline
+Interpretation and Guardrails
+9. Crop Yield Prediction: Yield Forecaster
+What the SRS Establishes—and What It Does Not
+Manifest-Driven Form Behavior
+Prediction Pipeline
+Result Interpretation
+10. Data Lifecycle, Training, and Evaluation Pipeline
+Dataset Intake and Inspection
+Disease-Model Training Flow
+Crop-Recommendation Training Flow
+Yield-Model Training Flow
+Evaluation Record
+11. API Contracts and Backend Behavior
+Route Inventory
+Common Response Envelope
+Illustrative Crop Request Contract
+Illustrative Disease Response
+Yield Contract Discovery
+Idempotency, Timeouts, and Side Effects
+12. Frontend Behavior and User Experience
+Screen Responsibilities
+Form Validation Experience
+Result State Model
+Accessibility and Responsive Design
+13. Application Data Design and Database Schema
+Data Principles
+Recommended Operational Entities
+Relationship Model
+History Query Rules
+Retention and Deletion
+14. Security, Privacy, and Abuse Resistance
+Security Controls by Surface
+Privacy Practices
+Abuse and Reliability Protections
+15. Failure Modes, Errors, and Recovery Behavior
+Error Contract Rules
+Fallback Policy
+16. Testing and Quality Assurance Strategy
+Test Portfolio
+Minimum Functional Scenarios
+Test Data Discipline
+17. Deployment, Environments, and Release Management
+Recommended Runtime Topology
+Release Workflow
+Configuration and Secrets
+Readiness Checks
+18. Operational Monitoring, Maintenance, and Incident Response
+Recommended Operational Signals
+Log Event Shape
+Model Maintenance
+Incident Playbook
+19. Assumptions, Decisions, and Unresolved Questions
+Assumptions to Validate
+20. Implementation Roadmap
+Recommended Milestone Demonstrations
+21. Acceptance Traceability and Completion Checklist
+Release Checklist
+22. Glossary and Final Operating Principles
+Final Principles
+In Word, update the table of contents if page numbers are not shown automatically: right-click the table and select Update Field.
+1. Executive Summary
+SOURCE REQUIREMENT / SRS POSITION
+AgriVision AI is a web-based decision-support platform with three independent AI-powered services: plant disease detection from a leaf image, smart crop recommendation from soil and weather values, and crop yield prediction from a final dataset-supported schema.
+RECOMMENDED IMPLEMENTATION DETAIL
+The recommended product shape is a responsive React frontend, a Python FastAPI backend, PostgreSQL for application records, and three versioned inference artifacts. Each module can be deployed behind one API while retaining a separate validation and model lifecycle.
+The system is intended to make agricultural information easier to access, not to replace agronomic assessment, field inspection, laboratory testing, or local crop-management advice. Every result must be presented as a model output with its relevant limitations.
+A user begins at a dashboard, chooses a service, supplies only the input that the corresponding trained model supports, receives a clearly labeled result, and may view a history record where that optional capability is enabled. The backend validates the request, invokes exactly one relevant model, formats the result, optionally stores a record, and returns a safe response.
+Service
+User question
+Primary input
+Result
+Plant Doctor
+What disease or healthy condition may be visible?
+A supported leaf image
+Predicted class, model confidence, and available curated guidance
+Crop Advisor
+Which crop is suitable for these values?
+N, P, K, temperature, humidity, pH, and rainfall
+Recommended crop and confidence information where the selected classifier supports it
+Yield Forecaster
+What yield might be expected in this supported context?
+Only fields represented by the final yield training schema
+Estimated yield with its dataset-defined unit and limitations
+Success Condition
+The project is functionally complete when each of the three services accepts a valid, supported request; uses a documented and versioned model artifact; returns an understandable response; handles invalid or unavailable dependencies without fabricating a result; and is connected to the frontend. Any optional account, history, or administration feature is complete only when explicitly included in the final release scope.
+2. Scope, Objectives, and Product Boundaries
+SOURCE REQUIREMENT / SRS POSITION
+The SRS objectives are to detect common plant diseases, recommend suitable crops from soil and weather parameters, predict crop yield from agricultural data, provide a user-friendly web interface, display results clearly, provide basic guidance, and retain a modular architecture.
+RECOMMENDED IMPLEMENTATION DETAIL
+The initial release should maintain a narrow, demonstrable boundary: model-backed predictions, curated guidance, validation, version traceability, and an interface that explains what the result does and does not mean.
+In-Scope Capabilities
+A landing page and dashboard that expose the three services as independent workflows.
+Leaf-image upload, safe image validation, preprocessing, disease classification, result rendering, and curated disease guidance.
+A crop recommendation form containing nitrogen, phosphorus, potassium, temperature, humidity, pH, and rainfall values.
+A yield form generated from the final selected model schema rather than a speculative universal list of agricultural fields.
+REST interfaces for health, the three predictions, history where enabled, and guidance retrieval.
+Optional prediction history and optional administrator functions, with privacy controls when accounts exist.
+Explicitly Outside Mandatory Initial Scope
+Area
+Boundary
+Additional trained models
+No image-quality model, weather model, recommendation ensemble, chat model, or separate guidance model is part of the initial three-model limit.
+Live integrations
+Weather APIs, soil sensors, government services, satellite or drone imagery, and location intelligence are future possibilities, not initial requirements.
+Delivery channels
+A native mobile app and downloadable prediction reports are future enhancements unless deliberately added to the implementation scope.
+Guarantees
+The system does not guarantee disease diagnosis, crop suitability, farm profitability, or realized yield.
+Professional advice
+Curated guidance is informational. It must not be presented as a substitute for a qualified local agronomist or plant-health professional.
+System Boundary
+AgriVision AI owns the browser experience, API validation, model invocation, result formatting, optional account and history records, model version references, and curated guidance records. It does not own the underlying weather, soil, crop-production, or image datasets. Training datasets are governed by their source and license terms; production operation uses only the selected exported artifacts and their documented preprocessing assets.
+3. Requirements Traceability and Model-Governance Constraint
+SOURCE REQUIREMENT / SRS POSITION
+The initial application shall contain a maximum of three trained machine learning models. Only one selected algorithm or trained model is deployed for each task. Alternatives may be compared during experimentation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Model selection and deployment should be governed by a model registry, a release checklist, and a hard deployment check that prevents a fourth production inference artifact from being registered as a user-facing model.
+OPEN DECISION / CONFIRM BEFORE BUILD
+The label ResNet-99-2 is source-supplied but does not define a universally identifiable architecture, layer configuration, weights source, input dimensions, license, framework, or preprocessing. The project must record the exact code implementation, architecture definition, class map, input transform, and artifact checksum before model training or inference begins.
+Model Inventory
+Model slot
+Task
+Source position
+Deployment rule
+Model 1
+Leaf-image multi-class classification
+Final SRS addendum: ResNet-99-2. Earlier text: EfficientNetB0 or MobileNetV2 as alternatives.
+Deploy one disease classifier only. Confirm the exact ResNet-99-2 definition before implementation.
+Model 2
+Crop recommendation classification
+Random Forest Classifier or XGBoost Classifier proposed.
+Select exactly one final classifier based on documented experimentation.
+Model 3
+Crop yield regression
+XGBoost Regressor proposed.
+Deploy one regressor whose feature contract and output unit are bound to the selected training dataset.
+Non-model guidance
+Curated disease and crop information
+Required/allowed as predefined information and rules.
+Must remain content lookup or rules; it cannot become a fourth trained model.
+Disease-Model Reconciliation
+The SRS contains a chronology rather than a contradiction: the earlier architecture section presents EfficientNetB0 and MobileNetV2 as proposed options, while the final addendum identifies ResNet-99-2 as the selected architecture. This document preserves both facts. For implementation, the final addendum takes precedence, and the earlier names are retained only as evaluated alternatives unless the project formally changes the selection.
+Requirement-to-Design Mapping
+SRS intent
+Design response
+Verification evidence
+Three independent AI services
+Three route groups and three artifact packages, each with a separate input contract.
+Route tests, model registry, and end-to-end module demonstrations.
+Clear result presentation
+Result cards distinguish prediction, confidence, unit, guidance, warnings, and model version.
+UI review and usability tests.
+Input validation
+Client hints plus server-authoritative schema validation and model-domain checks.
+Negative API and form tests.
+Prediction history if enabled
+Private records linked to the signed-in user and controlled retention.
+Authorization and history tests.
+Model evaluation documented
+Training reports, split rationale, metric outputs, limitations, and release sign-off.
+Model-release checklist.
+4. Users, Roles, and Primary Use Cases
+SOURCE REQUIREMENT / SRS POSITION
+The SRS names general users or farmers, administrators if implemented, and developers or model maintainers. Authentication and administrator capabilities are conditional features rather than unqualified mandatory scope.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use role-aware navigation even in a small academic build. The interface should avoid exposing management screens or private history to unauthenticated visitors, and the API must enforce authorization independently of user-interface visibility.
+Role
+Main goals
+Allowed actions
+Important boundary
+General user / farmer
+Obtain a disease indication, crop recommendation, or yield estimate.
+Submit supported inputs, view results, and use history if enabled.
+Cannot alter model files, guidance source of truth, or another user's records.
+Administrator
+Monitor application activity and manage approved reference information where included.
+Use an administration area only if that module is implemented.
+Administrator scope, identity source, and permissions must be explicitly defined.
+Developer / model maintainer
+Prepare data, train/evaluate models, release artifacts, diagnose failures.
+Maintain code, artifacts, model metadata, tests, and operations.
+Not necessarily a public-facing application role.
+Use Case: Plant Disease Detection
+User opens Plant Doctor, reviews accepted-file guidance, and selects a JPG, JPEG, or PNG leaf image.
+Frontend performs immediate usability checks; backend decodes the file, validates policy, and applies the frozen inference transform.
+The disease service loads or obtains the active ResNet-99-2 artifact, produces class scores, selects the top supported class, and returns a structured result.
+Frontend displays the predicted label, confidence as model confidence rather than certainty, available curated guidance, model limitations, and a retry path.
+Use Case: Crop Recommendation
+User enters the seven source-defined values: N, P, K, temperature, humidity, pH, and rainfall.
+The API validates presence, numeric form, finite values, and supported ranges derived from the training contract.
+The deployed classifier receives values in the exact order and transformation captured at training time.
+Frontend shows the crop result with supported confidence information, input warnings, and a reminder that local suitability requires additional context.
+Use Case: Yield Prediction
+User opens Yield Forecaster and receives a form that is generated from or aligned to the active model feature manifest.
+The user completes required supported values; the API validates categories, types, units, and domain restrictions represented in the final yield artifact.
+The regression pipeline encodes and transforms values exactly as trained, then returns an estimate and its declared unit.
+Frontend shows the estimate, applicable limitations, and a warning when the request is outside validated domain or cannot be supported.
+5. Functional Architecture and End-to-End Flow
+SOURCE REQUIREMENT / SRS POSITION
+The SRS describes a web frontend, a FastAPI backend, a PostgreSQL database, three machine-learning components, and optional history/administration capability. Frontend and backend communicate through REST APIs.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use a layered architecture that isolates user-interface code, HTTP validation, application orchestration, inference adapters, persistence, and curated guidance. This makes models replaceable without rewriting every screen or endpoint.
+Logical Architecture
+Layer
+Responsibilities
+Must not be responsible for
+React frontend
+Pages, forms, client-side hints, upload interaction, loading states, accessible results, navigation.
+Holding secrets, connecting directly to the database, or determining a prediction.
+FastAPI API layer
+Route handling, authentication where used, request parsing, response contracts, error mapping, rate/size policy.
+Training models during a prediction request.
+Application services
+Orchestrate validation, invoke a named inference adapter, create history/audit records, resolve guidance.
+Embedding model-specific preprocessing directly in route handlers.
+Inference adapters
+Load active artifacts, execute the frozen preprocessing/prediction pipeline, return typed results and model metadata.
+Accepting arbitrary unsupported fields or silently substituting an alternate model.
+PostgreSQL
+Persist operational metadata, optional users/history, guidance records, model release metadata, audit events.
+Storing raw model files or acting as an inference engine.
+Artifact storage
+Store versioned model packages and preprocessing assets under controlled access.
+Being writable by public application requests.
+Canonical Request Lifecycle
+1. The browser submits a module-specific request over HTTPS. 2. The API assigns a correlation identifier, authenticates if required, applies size and shape controls, and parses the input. 3. The module service validates model-domain constraints. 4. The appropriate inference adapter applies the release-specific preprocessing and runs exactly one selected model. 5. The service resolves curated guidance only after a supported disease key is available. 6. A response is built from declared fields, optionally persisted to history, and returned with safe warnings. 7. Errors are logged with the correlation identifier without exposing stack traces or sensitive values to the user.
+Independence of the Three Services
+The three services share platform capabilities such as validation, observability, model metadata, and optional history. They do not depend on one another for a prediction. A crop recommendation request cannot require a disease result, and a yield request cannot assume crop-advisor output unless an explicitly designed future workflow obtains user confirmation and the yield model supports the transferred value.
+Suggested Repository Boundary
+Area
+Recommended contents
+frontend/
+React application, routes, UI components, client API layer, validation presentation, accessibility tests.
+backend/api/
+FastAPI routers, request/response schemas, dependency wiring, error mapping, authentication middleware where selected.
+backend/services/
+Use-case orchestration for disease, crop, yield, history, guidance, and model release lookup.
+backend/inference/
+Artifact loaders, model adapters, preprocessing runners, feature-manifest validation, model health checks.
+ml/
+Dataset inspection, notebooks or scripts, reproducible training jobs, evaluation reports, model manifests, release packaging.
+infra/
+Container definitions, environment templates, deployment configuration, monitoring setup, and runbooks.
+6. Module Internals: Shared Inference Contract
+SOURCE REQUIREMENT / SRS POSITION
+The SRS requires each model to have a documented input and output format, tracked model versions, modular code, and maintained API documentation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Implement each deployed model as a self-contained release package with a manifest, immutable artifact reference, preprocessing specification, supported-domain declaration, output mapping, and evaluation link. The runtime should call the package through a stable adapter interface.
+Model Release Package
+Package element
+Purpose
+Source-status note
+Model artifact
+Serialized weights/model object for the one deployed task model.
+Required concept; actual artifact format depends on framework.
+Preprocessing asset
+Frozen scaler, encoder, image transform configuration, and/or feature order required at inference.
+Required to prevent train/serve mismatch.
+Feature or class manifest
+Declares accepted inputs, types, categories, class labels, target unit, and output interpretation.
+Recommended formal contract; do not infer unknown dataset fields.
+Evaluation report link
+Connects the release to split method, metrics, limitations, and approval date.
+Recommended governance evidence; metrics must be actual, not invented.
+Version and checksum
+Identifies the exact artifact used for a result and supports rollback.
+Recommended operational control.
+Compatibility information
+Runtime/framework version and package dependencies needed to load safely.
+Recommended deployment control.
+Shared Adapter Interface
+A module adapter should accept a validated application request and an active release manifest, then return a typed domain result. Its internal behavior is: validate final contract; transform input with release-owned preprocessing; invoke the model; convert raw output to declared semantics; attach model identifier/version; return warnings about support limits. This interface prevents route code from containing model-specific feature orders, classes, or thresholds.
+Training/Serving Parity
+The production service must reuse the same logical transformations that were fitted or defined during training. Examples include categorical encoding, feature ordering, scaling, missing-value treatment, image resizing, normalization, and class-label mapping. Reimplementing these transformations separately in frontend code or ad hoc request handlers creates a high risk of silent inconsistency.
+Runtime Model Loading
+Load and validate each selected artifact at service startup or through a controlled lazy loader with a readiness check.
+Expose model readiness internally and through a restricted health/readiness view; do not publish artifact paths, secrets, or raw diagnostic traces.
+Fail closed if the active artifact, manifest, or required preprocessing component is missing or incompatible.
+Use an explicit release-selection setting rather than falling back automatically to an old or experimental artifact.
+Record the released model version with every history record and in operational logs.
+7. Plant Disease Detection: Plant Doctor
+SOURCE REQUIREMENT / SRS POSITION
+The system shall accept an uploaded leaf image, validate image type and size, preprocess it, classify it with the trained disease model, display the predicted class and confidence, provide related guidance where available, and show an understandable error when processing fails. The final SRS addendum selects ResNet-99-2.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use a multipart upload endpoint backed by a strict file-validation service. Treat the disease classifier as a closed-set model: it can classify only the healthy/disease classes represented in its final training label map and must not be described as universal plant diagnosis.
+OPEN DECISION / CONFIRM BEFORE BUILD
+Confirm the exact meaning and provenance of ResNet-99-2, the machine-learning framework, class-label mapping, image input transform, and whether any external evaluation dataset is permitted and suitable for this academic project.
+Input Contract
+Item
+Contract
+Accepted source formats
+JPG, JPEG, or PNG as named by the SRS.
+Content requirement
+A reasonably clear image containing a plant leaf; focus, lighting, background, and crop coverage affect suitability.
+Unknown thresholds
+Maximum file size, dimensions, aspect policy, and exact model input dimensions are intentionally not fixed here; establish them from hosting limits and the final model transform.
+Validation sequence
+Request size limit; content-type allowlist; extension as a non-authoritative hint; decode attempt; image dimensions/pixel safety checks; safe preprocessing.
+Retention
+Images should not be kept permanently unless retention policy requires it. If stored temporarily or for history, document location, access controls, retention, and deletion path.
+Inference Pipeline
+Receive multipart upload and generate a correlation identifier before any processing.
+Reject an absent, oversized, unsupported, malformed, unreadable, or decompression-risk image with a controlled validation response.
+Decode through a maintained image library; remove or ignore unneeded metadata; convert to the color representation required by the release manifest.
+Apply the exact ResNet-99-2 release transform: resize/crop policy, tensor conversion, normalization, and expected channel ordering. These details must be frozen with the artifact rather than guessed from the model name.
+Run model inference, obtain class scores, and map the selected index through the immutable release class map.
+Return predicted class, confidence representation, model version, limitations, and curated guidance only for an explicitly mapped supported disease key.
+Result Presentation
+Result element
+Required behavior
+Predicted condition
+Display the supported class label without claiming laboratory or expert confirmation.
+Confidence
+Label as model confidence. Explain that a high score reflects the model distribution and does not guarantee correctness in a real field image.
+Guidance
+Show curated prevention/treatment information when maintained for the returned disease key. If unavailable, state that no curated guidance is available rather than generating advice.
+Quality notice
+Prompt the user to submit a clear, well-lit leaf image and acknowledge limitations for unfamiliar crops, diseases, or field conditions.
+Failure state
+Do not render stale or invented predictions. Preserve the user's selected file state where practical and offer a retry.
+Dataset and Evaluation Discipline
+The named dataset is the New Plant Diseases Dataset, with PlantDoc named as an optional external evaluation dataset. Dataset availability, license, class coverage, duplicates, split leakage, label semantics, and real-field representativeness must be inspected before training. The SRS identifies accuracy, precision, recall, F1-score, and a confusion matrix as evaluation outputs, but it does not supply achieved scores. The final report must present measured results by release, not targets disguised as outcomes.
+8. Smart Crop Recommendation: Crop Advisor
+SOURCE REQUIREMENT / SRS POSITION
+The crop module shall accept Nitrogen, Phosphorus, Potassium, temperature, humidity, pH, and rainfall; validate values; process them through one selected classification model; display a recommended crop; and show confidence information where supported.
+RECOMMENDED IMPLEMENTATION DETAIL
+Choose exactly one final classifier—Random Forest or XGBoost—from the SRS alternatives only after a documented comparison. Package the selected classifier together with its feature order, numeric treatment, supported ranges, and crop-label mapping.
+OPEN DECISION / CONFIRM BEFORE BUILD
+Select the production classifier, whether probability/confidence will be shown, the supported range policy, the form's unit labels, and the dataset license/version after the crop recommendation dataset is inspected.
+Source-Defined Feature Set
+Business label
+Meaning
+Implementation constraint
+Nitrogen (N)
+Nitrogen content in soil.
+Use the unit and scale represented by the chosen training dataset.
+Phosphorus (P)
+Phosphorus content in soil.
+Use the unit and scale represented by the chosen training dataset.
+Potassium (K)
+Potassium content in soil.
+Use the unit and scale represented by the chosen training dataset.
+Temperature
+Environmental temperature.
+Declare the unit and supported range in the release manifest and UI.
+Humidity
+Environmental humidity.
+Declare the scale and supported range in the release manifest and UI.
+pH
+Soil acidity/alkalinity measure.
+Validate numeric form and model-supported domain.
+Rainfall
+Rainfall measurement.
+Declare the dataset time basis and unit before exposing the field to users.
+Processing Pipeline
+Parse the JSON body and reject missing fields, non-numeric values, non-finite values, and duplicate/conflicting fields.
+Validate the request against the release manifest. A numeric input can be syntactically valid yet outside the training-supported domain; handle that case with a clearly labeled warning or rejection policy selected before release.
+Construct the vector in the feature order frozen during training. User-interface ordering must not be assumed to equal model ordering.
+Apply the exact training-compatible preprocessing. A tree model may not require scaling, but the deployed pipeline must still preserve any transformations actually used.
+Run the one selected classifier and map the class to the supported crop label. Return confidence only where the model output and calibration interpretation are documented.
+Interpretation and Guardrails
+The recommendation is a dataset-backed classification result. It does not account automatically for local seed availability, irrigation, pest pressure, market conditions, farm management, regulatory constraints, recent laboratory results, or climate anomalies unless such variables are actually part of the model contract. The result screen should say this in concise user-facing language.
+9. Crop Yield Prediction: Yield Forecaster
+SOURCE REQUIREMENT / SRS POSITION
+The yield module shall process the required agricultural parameters through an XGBoost Regressor, display an estimated yield and corresponding unit, and notify users when inputs fall outside the supported model range. The final fields and unit must match the selected yield dataset.
+RECOMMENDED IMPLEMENTATION DETAIL
+Build this module from a machine-readable feature manifest generated during training. Do not hard-code a speculative yield form. The frontend should render the active fields, units, type constraints, categorical options, and help text from a controlled configuration derived from the artifact.
+OPEN DECISION / CONFIRM BEFORE BUILD
+Inspect the final yield dataset before finalizing API fields, database retention, UI labels, units, categorical choices, missing-data policy, and validation bounds. This is a release-blocking decision.
+What the SRS Establishes—and What It Does Not
+Known from source
+Must be discovered from selected data/training
+Task is regression using a proposed XGBoost Regressor.
+Exact input columns, target column, yield unit, location coverage, time coverage, supported categories, missing-value treatment, and any feature encodings.
+Candidate concepts include crop type, location/region if supported, season, year where available, cultivated area, historical agricultural data, and weather/soil features where available.
+Whether each candidate concept exists in the dataset and is permissible for inference.
+Output is an estimated crop yield with a unit.
+The exact unit text and whether conversion is appropriate. No conversion may be assumed without verified metadata.
+Dataset may be the named Crop Yield Prediction Dataset or a suitable crop-production dataset.
+Final dataset identity, license, schema, data quality, and release version.
+Manifest-Driven Form Behavior
+A field definition declares display label, API key, data type, unit/help text, required status, supported categories or numeric bounds, and privacy classification.
+The client loads the active contract at build time or through a controlled configuration endpoint; it must not expose internal artifact paths or training data.
+The backend remains authoritative: it revalidates every field and rejects extra or missing features unless a documented compatibility policy says otherwise.
+Categorical encodings are applied server-side by the trained pipeline. The browser sends an allowed business value, not an ordinal number invented by the UI.
+Prediction Pipeline
+Validate that the request matches the active release schema exactly enough for safe inference.
+Normalize user-provided units only when a verified and documented conversion is supplied; otherwise require the declared unit.
+Apply the release-owned encoding, missing-value behavior, feature selection, and feature ordering.
+Run the XGBoost regressor and return the numeric estimate with the model-declared unit and model version.
+Warn or decline when the input is outside policy-defined supported domain. Do not present a false precision or a guaranteed harvest quantity.
+Result Interpretation
+Yield is influenced by factors that may not be captured by the selected historical dataset. The result must be phrased as an estimate from the model's represented data context. Avoid currency, profit, harvest date, or actionable input recommendations unless they are separately supported by the documented scope and data.
+10. Data Lifecycle, Training, and Evaluation Pipeline
+SOURCE REQUIREMENT / SRS POSITION
+The SRS requires duplicate detection, missing-value handling, data-type validation, feature selection, categorical encoding where needed, scaling where required, image resizing/normalization, train-validation-test splitting, and appropriate evaluation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Treat notebooks as exploratory evidence, not the release system. Use repeatable data-preparation and training jobs that produce versioned manifests, artifacts, evaluation reports, and an auditable relationship between input data and output model.
+Dataset Intake and Inspection
+Stage
+Required output
+Failure or decision gate
+Acquire
+Recorded source URL/reference, acquisition date, license/terms review, checksum where practical.
+Do not train from a dataset whose use terms are unknown or unsuitable.
+Profile
+Schema report, type distribution, missingness, duplicate analysis, class/target distribution, and example records/images.
+Stop if labels, target semantics, or yield units cannot be understood.
+Define scope
+Included classes/features, exclusions, intended users, and expected operational domain.
+Avoid claiming coverage outside represented crops, conditions, or regions.
+Split strategy
+Training, validation, and held-out test definition with a documented leakage rationale.
+Prevent duplicate/near-duplicate images or temporally/geographically inappropriate records from contaminating evaluation.
+Transform
+Versioned preprocessing pipeline fitted only on the appropriate split where applicable.
+Reject train/serve transformations that cannot be exported or replicated.
+Release
+Artifact package, manifest, evaluation report, approval record, and rollback reference.
+Do not publish unreviewed experimental artifacts.
+Disease-Model Training Flow
+For leaf images: inventory classes and healthy labels; inspect duplicates and label quality; define a split that avoids leakage; implement the confirmed ResNet-99-2 architecture; apply training transforms separately from deterministic inference transforms; train with reproducible configuration; evaluate on held-out images; optionally evaluate on an external domain only if the data is suitable; inspect confusion patterns; export weights, class map, inference transform, and report as a single release.
+Crop-Recommendation Training Flow
+For crop recommendation: load the seven expected feature concepts and crop label; verify data types and units; profile missingness and range; decide documented handling for invalid/missing records; select the one final classifier after comparison; fit any required pipeline on the training portion; evaluate against a stratified held-out set as required by the SRS; inspect per-class behavior; export the selected model with feature order and label map.
+Yield-Model Training Flow
+For yield prediction: first determine the actual dataset target and its unit. Build a schema contract from verified columns, identify time/location leakage risks, encode categories and handle missing values with train-only fitting where applicable, define a defensible hold-out strategy, train the proposed regressor, report MAE, RMSE, and R-squared on unseen records, and export the exact preprocessing plus unit metadata. The evaluation report must explain whether a metric is appropriate to the target scale and dataset distribution.
+Evaluation Record
+Model
+SRS metric family
+Release report must add
+Disease classification
+Accuracy, precision, recall, F1-score, confusion matrix.
+Dataset split, class set, support per class, preprocessing, threshold/selection behavior, limitations, and actual measured values.
+Crop classification
+Accuracy, precision, recall, F1-score.
+Feature contract, stratification approach, label distribution, comparison rationale, and actual measured values.
+Yield regression
+MAE, RMSE, R-squared.
+Target/unit definition, split rationale, residual analysis, data coverage, and actual measured values.
+No metric value belongs in this design document because the supplied SRS specifies evaluation method, not achieved performance. The model release report is the authoritative location for measured results.
+11. API Contracts and Backend Behavior
+SOURCE REQUIREMENT / SRS POSITION
+The SRS proposes REST endpoints for health, disease prediction, crop recommendation, yield prediction, history, and guidance. The exact endpoint design may be adjusted during implementation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use versioned, documented endpoints with consistent envelope fields, machine-readable validation errors, correlation identifiers, and OpenAPI documentation generated from backend schemas. Endpoint names below preserve the proposed SRS paths where possible.
+Route Inventory
+Method and route
+Purpose
+Input
+Success response
+GET /api/health
+Basic liveness/health check.
+None.
+Service status without secrets or internal file paths.
+POST /api/disease/predict
+Classify a supported leaf image.
+Multipart form with image file.
+Predicted class, confidence representation, guidance if available, model version, warnings, request ID.
+POST /api/crop/recommend
+Recommend a crop.
+JSON containing the seven source-defined feature concepts.
+Recommended crop, optional supported confidence, model version, warnings, request ID.
+POST /api/yield/predict
+Estimate yield.
+JSON matching the active yield release schema only.
+Estimate, release-defined unit, model version, warnings, request ID.
+GET /api/history
+Retrieve authorized saved predictions where enabled.
+Authenticated query parameters for pagination/filtering if enabled.
+Only records permitted for the active user/context.
+GET /api/guidance/{disease}
+Retrieve curated guidance for a supported key.
+Path disease key.
+Curated content or a controlled not-found response.
+Common Response Envelope
+Recommended success fields are: request_id; module; status; result; model_version; warnings; and generated_at. The result object is module-specific. Recommended failure fields are: request_id; status set to error; error.code; error.message safe for the user; error.field where validation can identify one; and retryable. Avoid returning framework exception names, raw stack traces, dataset paths, database errors, or secret-bearing configuration.
+Illustrative Crop Request Contract
+ILLUSTRATIVE IMPLEMENTATION PAYLOAD — FIELD NAMES ARE RECOMMENDED API KEYS, NOT A CLAIM ABOUT ADDITIONAL DATASET COLUMNS
+{"nitrogen": number, "phosphorus": number, "potassium": number, "temperature": number, "humidity": number, "ph": number, "rainfall": number}
+The backend maps these API keys to the selected release feature order. Units and numeric bounds are release-configured and surfaced to users; they are not implied by the JSON key names.
+Illustrative Disease Response
+ILLUSTRATIVE IMPLEMENTATION RESPONSE
+{"request_id": "...", "module": "disease", "status": "success", "result": {"predicted_class": "...", "confidence": "...", "guidance_available": true}, "model_version": "...", "warnings": []}
+Ellipses represent runtime values; no class, confidence value, or guarantee is implied. Confidence may be absent or represented differently if the selected implementation cannot provide a meaningful supported confidence field.
+Yield Contract Discovery
+The yield endpoint must reject requests that do not match the deployed feature manifest. A recommended supporting capability is a non-sensitive schema descriptor used by the frontend to render the form, but adding such an endpoint is an implementation decision; it should expose field labels and validation metadata, never raw training rows or internal artifact locations.
+Idempotency, Timeouts, and Side Effects
+Prediction endpoints should be treated as read-like computations even if an optional history row is created. A client retry can otherwise create duplicate history records.
+Use a client request identifier or server-issued correlation ID to deduplicate a short retry window where history is enabled.
+Bound upload/read time, preprocessing time, and inference execution time. A timeout must return a controlled unavailable result and must not cache a partially computed response.
+Persist a prediction only after the model response is complete and valid, unless a deliberate audit policy records failed requests separately.
+12. Frontend Behavior and User Experience
+SOURCE REQUIREMENT / SRS POSITION
+The SRS identifies Home, Dashboard, Plant Doctor, Crop Advisor, Yield Forecaster, Prediction Result, History, and optional Admin Panel screens. The interface shall be clear, responsive, and understandable on desktop and mobile screens.
+RECOMMENDED IMPLEMENTATION DETAIL
+Design the frontend as a stateful guide through one task at a time: explain inputs before submission, show progress while a request runs, render a result only from a successful response, and retain enough user input to correct validation errors without re-entry.
+Screen Responsibilities
+Screen
+Core behavior
+Important details
+Home
+Explains purpose, scope, and limitations; leads to dashboard.
+Use plain language; avoid implying expert diagnosis or guarantees.
+Dashboard
+Shows the three modules and optional history access.
+Each card states required input type and the question it answers.
+Plant Doctor
+Accepts image upload and shows validation, preview where allowed, progress, result, and guidance.
+Make accepted formats clear; do not use image preview as a claim that upload succeeded.
+Crop Advisor
+Presents seven labeled inputs with unit/help text and validation.
+Prevent accidental form submission while invalid; backend remains authoritative.
+Yield Forecaster
+Renders only the selected release's fields.
+Do not display candidate source features that were not selected for training.
+Result view
+Presents output, version, warnings, limitations, and next action.
+Separate model result from curated guidance and from user-entered values.
+History
+Shows authorized prior records only when capability is enabled.
+Give clear empty, loading, error, pagination, and privacy states.
+Admin panel
+Optional controlled operational/reference management.
+Require explicit role enforcement on the API; hidden navigation is not a permission boundary.
+Form Validation Experience
+Label every field with human-readable name, expected unit or category, whether it is required, and concise example/help text where useful.
+Use client-side checks for fast feedback but send the original value to the server for authoritative parsing and range evaluation.
+Display errors adjacent to the relevant control, preserve entered values, and move focus to the first relevant error after submission.
+Use a disabled or guarded submit state while a request is running; support retry after a transient failure.
+Do not silently clamp, round, replace, or manufacture values. Any conversion must be visible and must correspond to the release contract.
+Result State Model
+State
+Frontend behavior
+Idle
+Explain the service and required inputs; no result card is rendered.
+Editing
+Show local guidance and field errors without treating them as backend validation.
+Submitting
+Lock duplicate submission, announce progress accessibly, and retain the current input.
+Success
+Render only structured response fields; show model version and warnings.
+Validation error
+Map field errors to controls and preserve entered values.
+Unavailable/failure
+Show safe retry guidance and request ID; do not retain or display a partial/stale model result.
+Accessibility and Responsive Design
+Use semantic headings, labeled inputs, keyboard-operable controls, visible focus indicators, sufficient contrast, live-region announcements for asynchronous results, and error text that does not rely on color alone. Layout should reflow for narrow screens without hiding validation, units, or limitations. File upload requires a conventional accessible control; drag-and-drop can be supplementary, not the only path.
+13. Application Data Design and Database Schema
+SOURCE REQUIREMENT / SRS POSITION
+The SRS allows storage of user accounts where authentication is implemented, prediction history, timestamps, results, model versions, and relevant input metadata. It names PostgreSQL as the proposed database.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use PostgreSQL for application records, not for raw training datasets or model artifacts. The proposed schema below is for product operation and deliberately separates application fields from unknown dataset columns. It should be adjusted after final authentication, retention, and audit decisions.
+OPEN DECISION / CONFIRM BEFORE BUILD
+Define whether accounts, prediction inputs, image uploads, result histories, operational logs, and model-release metadata are retained; for how long; who can delete them; and how deletion affects reproducibility. The SRS says uploaded images should not be retained permanently unless policy requires it, but does not set a duration.
+Data Principles
+Persist the minimum information needed for enabled features, troubleshooting, reproducibility, and user expectations.
+Store the model version and validated input snapshot or permitted metadata with a completed prediction so historical results remain interpretable.
+Keep raw uploaded images out of primary relational tables. If retained, store a controlled object reference and retention metadata rather than binary image data.
+Use explicit migrations, database constraints for identifiers and relationships, and server-side access checks for every user-linked record.
+Do not confuse product schema fields with training dataset columns. Dataset-specific input is represented as a validated snapshot/JSON object only where the release contract permits it.
+Recommended Operational Entities
+Entity
+Purpose
+Candidate fields / relationships
+users (optional)
+Supports accounts and private history when authentication is in scope.
+user_id; identity fields chosen by auth design; role; created/updated timestamps; status. Do not define unnecessary personal fields.
+prediction_records
+Captures completed or policy-relevant prediction events.
+prediction_id; optional user_id; module; status; result summary; model_release_id; created timestamp; request/correlation ID.
+prediction_inputs
+Stores authorized input snapshot or safe metadata separately from result.
+prediction_id; contract_version; validated_input payload; retained-field policy marker. Encrypt or minimize if sensitive.
+model_releases
+Identifies deployable model packages and their operational metadata.
+model_release_id; module; version; artifact reference; manifest reference; status; release/retirement timestamps; evaluation report reference.
+guidance_entries
+Stores curated disease/crop guidance without another ML model.
+guidance_key; content; source/maintenance metadata; review status; effective dates where used.
+audit_events (recommended)
+Records privileged or configuration-affecting actions.
+event_id; actor/context; action; target reference; timestamp; safe metadata. Do not log secrets or raw private uploads.
+Relationship Model
+When accounts are enabled, one user may own many prediction records. Each completed prediction record references exactly one model release. A prediction may have zero or one retained input snapshot depending on retention policy. Guidance entries are looked up by an approved disease key but should not be copied indiscriminately into each record; a guidance version/reference may be stored when historical reproducibility is needed. Model releases are managed by authorized maintainers, not ordinary users.
+History Query Rules
+The history service must apply the user/role filter before pagination and retrieval. A record detail request must verify ownership or administrator authority server-side. If the system offers anonymous usage, history should be disabled or tied to a privacy-preserving session policy explicitly chosen by the project; it must not expose records through guessable identifiers.
+Retention and Deletion
+14. Security, Privacy, and Abuse Resistance
+SOURCE REQUIREMENT / SRS POSITION
+The SRS requires input validation, upload checking, protection of sensitive information in API responses, secure database credentials, HTTPS in production, and authorization for user-specific records when accounts exist.
+RECOMMENDED IMPLEMENTATION DETAIL
+Adopt defense in depth: browser checks improve usability; FastAPI schemas and service rules enforce business constraints; database/object storage permissions limit data access; deployment controls protect secrets and transport; logs support investigation without becoming a privacy leak.
+Security Controls by Surface
+Surface
+Recommended controls
+Browser and API transport
+HTTPS in production; secure headers; CORS restricted to intended origins; request IDs; no secrets shipped to browser bundles.
+Authentication and authorization
+Use a managed or deliberately designed authentication method only if accounts are in scope; authenticate before history/admin routes; enforce role/ownership checks in service code.
+Image upload
+Size limits; allowlisted formats; signature/decode validation; pixel/decompression safeguards; randomized storage names; non-executable storage; malware scanning if available and proportionate.
+JSON input
+Schema validation; finite numeric checks; range/domain policy; reject unknown or unsupported fields for model routes; protection against excessively large bodies.
+Database
+Least-privilege service account; parameterized queries/ORM; encrypted connection where supported; migrations; backups with access control; no credentials in source control.
+Model artifacts
+Read-only artifact location for runtime; signed/checksummed releases where feasible; only authorized maintainers can change active release configuration.
+Operations
+Secret manager/environment injection; dependency updates; restricted admin access; structured logs with sensitive-value redaction.
+Privacy Practices
+Prediction records and images may reveal information about a farm, crop, location, or user behavior. Collect only what an enabled feature requires. Provide a clear statement about whether inputs and images are stored, what history means, and who can access administrator records. Do not write raw images, full request bodies, authentication tokens, or database credentials to application logs.
+Abuse and Reliability Protections
+Rate-limit public prediction endpoints proportionately, especially image uploads, while allowing legitimate academic demonstration use.
+Limit concurrent expensive image inference so one user cannot exhaust server memory or CPU/GPU resources.
+Use content-length and pixel bounds before high-cost image decoding where possible.
+Return generic internal-error messages and a request ID; keep detailed traces restricted to operators.
+Test access control with both UI and direct API requests, because hidden menus do not secure server resources.
+15. Failure Modes, Errors, and Recovery Behavior
+SOURCE REQUIREMENT / SRS POSITION
+The system shall handle invalid inputs, unsupported images, backend or model prediction failures, and must not display fabricated prediction results when a model fails.
+RECOMMENDED IMPLEMENTATION DETAIL
+Define failure behavior before implementation so that the frontend, API, and operators respond consistently. A controlled rejection is preferable to an unreliable prediction.
+Failure mode
+User-visible behavior
+Backend / operator behavior
+Missing required input
+Identify the field and explain that it is required.
+Return validation error; do not invoke a model.
+Malformed or non-finite numeric value
+Explain expected numeric format.
+Reject before preprocessing; log safe validation metadata.
+Value outside supported domain
+Show a clear unsupported-range warning or rejection according to release policy.
+Record policy outcome; do not silently clamp.
+Unsupported/corrupt image
+Explain accepted formats or request a new image.
+Stop before inference; do not persist unsuitable content unless audit policy requires safe metadata.
+Model artifact unavailable
+Say the service is temporarily unavailable and offer retry.
+Mark readiness unhealthy; alert operators; never substitute an unknown artifact.
+Preprocessing incompatibility
+Return controlled service error with request ID.
+Quarantine release, inspect manifest/runtime compatibility, roll back if needed.
+Database unavailable
+If policy allows, show valid prediction with notice that history was not saved; otherwise return controlled error.
+Retry only safe writes; alert operators; preserve data consistency.
+Guidance unavailable
+Show the prediction and state that curated guidance is unavailable.
+Do not block an otherwise valid result; investigate content/configuration separately.
+Timeout/resource pressure
+Show retryable temporary failure, not a partial result.
+Apply limits, inspect queues/resources, and scale or reduce concurrency within budget.
+Unexpected exception
+Use a generic message and request ID.
+Log sanitized diagnostics, trace by correlation ID, and preserve incident evidence.
+Error Contract Rules
+Errors should distinguish validation, authentication/authorization, unavailable dependency, conflict/duplicate, and unexpected server failure. The API must use stable machine-readable codes so the frontend can render a useful message without matching on prose. A response never includes tracebacks, filesystem paths, raw database messages, or a prediction generated from an incomplete pipeline.
+Fallback Policy
+There is no acceptable inference fallback that adds another user-facing model or guesses a result. If the active disease model is unavailable, Plant Doctor is unavailable. If crop/yield artifacts are unavailable or incompatible, their module is unavailable. Guidance is the only independent content path and cannot replace a missing model result.
+16. Testing and Quality Assurance Strategy
+SOURCE REQUIREMENT / SRS POSITION
+The SRS calls for unit, integration, functional, performance, and security testing, including frontend/backend/model/database integrations and documented model evaluation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use a layered test portfolio that separates deterministic software behavior from empirical model evaluation. A passing API test means the contract works; it does not prove model quality. A strong metric report does not prove authorization, safety, or usability.
+Test Portfolio
+Test layer
+Representative coverage
+Evidence
+Unit
+Request parsing, numeric/image validation, feature ordering, class-map lookup, guidance lookup, error mapping, history authorization helpers.
+Automated test results and coverage appropriate to project scope.
+Contract/API
+Expected request/response schemas, field errors, status codes, unknown fields, multipart upload behavior, correlation IDs.
+OpenAPI validation and endpoint tests.
+Integration
+React client to FastAPI; FastAPI to each inference adapter; history to PostgreSQL; guidance retrieval; startup readiness.
+Repeatable integration run against test environment/artifacts.
+End-to-end
+A user completes each module through the UI; errors are recoverable; history is private when enabled.
+Browser test or manual test script with screenshots/log references.
+Model evaluation
+Held-out evaluation for each released artifact; relevant SRS metrics; leakage checks; limitations.
+Versioned evaluation report with actual results.
+Performance/resilience
+Concurrent requests, inference timing measurement, memory observation, timeout/retry behavior, dependency outage behavior.
+Load/resilience report without unsupported service promises.
+Security
+Unauthorized history/admin access, malicious file attempts, malformed bodies, CORS/auth configuration, secret exposure scan.
+Security test checklist and issue resolution record.
+Accessibility/usability
+Keyboard flow, label/error association, responsive layout, result comprehension, loading and failure states.
+Review checklist and user/supervisor feedback where feasible.
+Minimum Functional Scenarios
+Upload a valid supported leaf image and verify a structured disease response and result display.
+Upload unsupported, corrupt, or unsafe image input and verify controlled error with no fabricated disease result.
+Submit all seven valid crop-recommendation inputs and verify response uses the active release.
+Submit missing/non-numeric/out-of-domain crop values and verify field-aware validation behavior.
+Submit a yield request matching the final active schema and verify estimate plus declared unit.
+Submit unsupported yield category or missing required feature and verify controlled rejection.
+Create and retrieve a history record only for the authorized user, where history is enabled.
+Request guidance for a known and unknown key and verify safe behavior for both.
+Test Data Discipline
+Keep test fixtures separate from training data where possible. Test suites should never include production secrets, private farm records, or unlicensed image data. For model endpoint tests, use a controlled set of known-valid fixtures and assert contract properties rather than hard-coding unsupported accuracy claims.
+17. Deployment, Environments, and Release Management
+SOURCE REQUIREMENT / SRS POSITION
+The SRS proposes React.js, Python FastAPI, PostgreSQL, and Docker-compatible/Render-style deployment; the exact provider is not mandated. HTTPS is required in production.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use repeatable environment definitions and separate development, test/staging, and production concerns. The same released application image should be promoted through environments with configuration supplied externally, while model artifacts are selected by explicit release metadata.
+Recommended Runtime Topology
+Component
+Deployment responsibility
+Configuration boundary
+Frontend static app
+Serves React assets and communicates only with configured public API origin.
+Public API base URL and non-secret feature flags.
+FastAPI service
+Handles API routes, validation, orchestration, and model inference adapters.
+Database URL, allowed origins, auth settings, active release IDs, log level, resource limits.
+PostgreSQL
+Stores enabled application records and migrations.
+Credentials/connection supplied securely; backups and retention controlled by environment.
+Artifact store or mounted release volume
+Holds approved immutable model packages.
+Read-only runtime access; write access restricted to release process.
+Observability stack
+Receives sanitized logs, metrics, health checks, and alerts.
+Endpoints/tokens kept outside source control.
+Release Workflow
+Run automated linting, unit, contract, and integration checks against the candidate application build.
+Validate the candidate model package: manifest present, preprocessing present, compatibility checked, evaluation report linked, checksum/version recorded, and three-model maximum maintained.
+Deploy application build to staging with a deliberately selected set of non-production artifacts or approved staging copies.
+Run smoke tests for health, each prediction endpoint, error contract, guidance, and authorized history behavior where enabled.
+Promote with an explicit release record. Retain the immediately previous known-good application/model combination for rollback.
+Configuration and Secrets
+Configuration should be injected through environment-specific secret/config management rather than committed files. Typical sensitive values include database credentials, authentication signing keys, storage credentials, monitoring tokens, and third-party service credentials if later introduced. Do not expose these values in frontend bundles, screenshots, logs, or error messages.
+Readiness Checks
+A liveness check answers whether the service process is running. A readiness check additionally confirms that the selected model manifests/artifacts can load, the service configuration is coherent, and required dependencies meet the chosen availability policy. Readiness output should summarize only safe status categories, not model paths or secrets.
+18. Operational Monitoring, Maintenance, and Incident Response
+SOURCE REQUIREMENT / SRS POSITION
+The SRS requires important backend errors to be logged and administrator monitoring where implemented. It also requires model versions to be tracked.
+RECOMMENDED IMPLEMENTATION DETAIL
+Operate the system with structured, privacy-aware telemetry. Focus on whether the service is available, whether requests are valid, whether inference is failing or slowing, whether resource limits are being reached, and which release produced each result.
+Recommended Operational Signals
+Signal
+What it answers
+Privacy note
+Service availability
+Are frontend/API/readiness endpoints healthy?
+No user data required.
+Request count and outcome
+Which module receives requests and what proportion succeed, validate-fail, or fail internally?
+Aggregate by module/error code; avoid raw bodies.
+Inference duration
+Is preprocessing or model inference degrading?
+Tag by module/release, not user identity.
+Resource utilization
+Are CPU, memory, storage, or accelerator resources constrained?
+Infrastructure-only metrics.
+Artifact/release identity
+Which release is active and which generated an event?
+Safe version identifiers only.
+Database health
+Are connections, migrations, and write/read paths healthy?
+No query parameter values in logs.
+Upload rejections
+Are users frequently submitting unsupported images?
+Log reason category, not image contents.
+Log Event Shape
+Recommended common fields are timestamp, severity, service/module, request/correlation ID, route, sanitized outcome code, duration, active model release ID where relevant, and retryability. User identifiers should be pseudonymous or omitted from general logs unless operational need and access controls justify them. Never log passwords, tokens, raw images, full uploads, database credentials, or unredacted sensitive payloads.
+Model Maintenance
+Review released model artifacts when code/framework dependencies change; a loader-compatible artifact may still behave differently after dependency updates.
+Monitor request input validation failures and supported-domain warnings to identify unclear UI labels or evolving operational use, not to silently expand the model domain.
+Plan retraining only when data permissions, quality review, evaluation method, and release comparison are in place.
+Do not replace a release solely because it is newer. Record why it was selected and retain evidence for rollback.
+Incident Playbook
+For an outage: identify impact by module and release; use correlation IDs to inspect sanitized logs; verify configuration and artifact availability; disable or roll back only the affected module/release if safe; communicate unavailability rather than returning fallback predictions; document root cause and corrective action. For a privacy incident: restrict access, preserve necessary evidence, rotate compromised secrets, assess retained data, and follow the institution's incident process.
+19. Assumptions, Decisions, and Unresolved Questions
+SOURCE REQUIREMENT / SRS POSITION
+The SRS leaves several implementation details open, including exact hosting, authentication choice, selected crop classifier, yield data schema, and the precise ResNet-99-2 definition.
+RECOMMENDED IMPLEMENTATION DETAIL
+Treat these as explicit design decisions, not hidden assumptions. A decision log gives supervisors and implementers a concise list of what must be confirmed before a release claim is made.
+ID
+Open decision
+Why it matters
+Suggested owner / gate
+D-01
+Exact ResNet-99-2 implementation, framework, license, weights source, class map, and transform.
+Required for reproducible disease training and serving.
+ML lead; before disease-model implementation.
+D-02
+Final crop classifier: Random Forest or XGBoost.
+Controls artifact, confidence semantics, pipeline, and evaluation comparison.
+ML lead/supervisor; before crop release.
+D-03
+Final yield dataset and exact schema, target, unit, categories, coverage, and license.
+Controls the entire yield UI/API/model contract.
+ML lead/data owner; before yield UI finalization.
+D-04
+Authentication, identity source, and whether prediction history/admin functions are included.
+Controls privacy, data schema, routes, and user flows.
+Product owner/supervisor; before database/auth scope.
+D-05
+Image retention and deletion policy.
+Controls privacy, storage cost, history, and incident risk.
+Product owner/supervisor; before production data collection.
+D-06
+Hosting provider, database service, artifact storage, monitoring, and budget.
+Controls deployment topology, availability controls, and operations.
+Technical lead; before deployment.
+D-07
+Supported-domain/range behavior: warning versus rejection.
+Controls user experience and reliability claims for tabular models.
+ML/product leads; before API behavior lock.
+D-08
+Curated guidance source, review cadence, and maintenance responsibility.
+Controls safety, quality, and whether guidance remains current.
+Content owner/supervisor; before guidance publication.
+Assumptions to Validate
+The datasets named by the SRS remain accessible and may be used within their applicable terms for the intended academic project.
+The selected runtime has sufficient resources to load and serve the three selected artifacts within an acceptable, measured operational profile.
+Users can provide the required manual values with appropriate units and understand the limitations of model output.
+The product can operate without live weather, sensor, or location integrations in the initial scope.
+Curated agricultural guidance can be maintained separately from the three ML models.
+20. Implementation Roadmap
+SOURCE REQUIREMENT / SRS POSITION
+The SRS describes modular development and requires testing, documentation, model evaluation, and integration of all three models with the backend and frontend.
+RECOMMENDED IMPLEMENTATION DETAIL
+Sequence work to resolve data/model contracts before finalizing dependent screens. This avoids building a yield form or validation rules around unsupported fields.
+Phase
+Deliverables
+Exit criteria
+0. Governance and discovery
+Decision log, source/license review, project conventions, success criteria, dataset inspection plan.
+D-01 through D-04 have owners; scope is confirmed.
+1. Foundation
+Repository setup, React shell, FastAPI service, health route, config/secrets strategy, database migration baseline, CI checks.
+Frontend can call health endpoint in local environment.
+2. Data and model contracts
+Dataset profiles, feature/class manifests, preprocessing design, split plans, evaluation templates.
+Each module has a documented input/output contract; yield schema is known.
+3. Model development
+Three candidate/selected training pipelines, evaluation reports, exported release packages.
+Exactly one approved deployable artifact per module; no invented metrics.
+4. Backend inference
+Adapters, release registry, validation, endpoints, error envelope, optional history/guidance services.
+All routes pass contract/integration tests with approved artifacts.
+5. Frontend workflows
+Dashboard, three module forms, result/error states, responsive and accessible behavior, optional history/admin UI.
+End-to-end manual/browser tests complete for in-scope flows.
+6. Quality hardening
+Security checks, resilience tests, load observation, logging/monitoring, retention controls, documentation updates.
+Known failure modes have controlled behavior and runbook coverage.
+7. Release and evaluation
+Deployment, smoke tests, model release evidence, acceptance traceability, demo script.
+All mandatory acceptance criteria have verification evidence.
+Recommended Milestone Demonstrations
+Foundation demo: dashboard connects to API health and renders a controlled unavailable state.
+Disease demo: valid image workflow, invalid image rejection, structured result, version label, and guidance lookup.
+Crop demo: seven-field form, client/server validation distinction, selected classifier response, and limitation message.
+Yield demo: manifest-aligned form, supported request, unit-aware result, and out-of-contract rejection.
+Release demo: model registry evidence proves the maximum-three-model constraint and links results to versions.
+21. Acceptance Traceability and Completion Checklist
+SOURCE REQUIREMENT / SRS POSITION
+The SRS provides acceptance criteria AC-01 through AC-12 covering dashboard access, valid inputs, three integrated model outputs, error handling, frontend display, optional history, and documented model evaluation.
+RECOMMENDED IMPLEMENTATION DETAIL
+Capture a lightweight verification record for every criterion, including test date, environment, responsible person, observed result, and evidence link. This turns the document into a usable final-year project handoff rather than a narrative only.
+SRS ID
+Acceptance condition
+Evidence to retain
+AC-01
+Users can access the dashboard.
+Navigation or browser test record.
+AC-02
+Users can upload valid plant images.
+Valid JPG/JPEG/PNG test and response capture.
+AC-03
+Disease model returns a prediction.
+Approved model release plus endpoint/UI result capture.
+AC-04
+Users can submit valid soil/weather parameters.
+Seven-field valid request test.
+AC-05
+Crop model returns a recommendation.
+Selected classifier release plus endpoint/UI capture.
+AC-06
+Users can submit supported yield information.
+Final schema-aligned request test.
+AC-07
+Yield model returns estimate with unit.
+Response/UI capture showing release-defined unit.
+AC-08
+Invalid inputs are handled appropriately.
+Negative test suite for forms, JSON, and image upload.
+AC-09
+Three models are integrated with FastAPI.
+Integration tests and active release inventory.
+AC-10
+Results are displayed through frontend.
+End-to-end demonstrations for all three services.
+AC-11
+History works if included.
+Authorization and history retrieval tests; otherwise scope decision recorded.
+AC-12
+Model evaluation results are documented.
+Versioned evaluation reports with actual measured metrics.
+Release Checklist
+The product deploys no more than three user-facing trained ML artifacts.
+The disease release identifies the exact ResNet-99-2 implementation and transform; EfficientNetB0/MobileNetV2 are not accidentally deployed as extra models.
+The crop release selects one classifier and documents its feature order and label mapping.
+The yield release includes verified schema and unit metadata from the selected dataset.
+Every module returns controlled errors instead of fabricated results.
+Evaluation reports contain real results and limitations, not unsupported targets.
+Security, retention, configuration, monitoring, and rollback decisions are documented for the chosen environment.
+22. Glossary and Final Operating Principles
+SOURCE REQUIREMENT / SRS POSITION
+The SRS defines AI, ML, SRS, API, CNN, NPK, EDA, MAE, RMSE, R-squared, inference, classification, and regression.
+RECOMMENDED IMPLEMENTATION DETAIL
+Use shared terminology across code, UI, model reports, and demonstrations. Consistent naming is particularly important where user-facing concepts differ from internal artifact or API names.
+Term
+Meaning in this project
+API
+The defined HTTP interface through which the frontend requests backend capabilities.
+Artifact
+A released model package or supporting preprocessing asset required for inference.
+Classification
+Selecting a category label, such as a plant condition or recommended crop.
+Confidence
+A model-output representation that must not be presented as certainty or a guarantee.
+EDA
+Exploratory data analysis used to understand data before model design.
+Feature manifest
+A controlled description of permitted model inputs, types, units, categories, order, and validation.
+Inference
+Using a trained artifact to generate a result for a new validated request.
+MAE / RMSE / R-squared
+Regression evaluation measures required for the yield-model report; values must be measured from the selected release.
+NPK
+Nitrogen, phosphorus, and potassium values used by the crop recommendation module.
+Release manifest
+Metadata that binds an artifact, preprocessing, contract, version, and evaluation evidence.
+Three-model limit
+Maximum of one selected trained production model for each of disease, crop recommendation, and yield prediction.
+Final Principles
+AgriVision AI is strongest when it is explicit about what it knows: it accepts only supported inputs, runs exactly the selected three models, displays outputs with their units and limitations, separates curated guidance from machine learning, protects user data when optional accounts/history exist, and records enough release information to reproduce or responsibly withdraw a result.
+The final build should be judged by evidence: documented dataset inspection, reproducible preprocessing, actual evaluation reports, safe API behavior, accessible frontend workflows, controlled failure states, and an honest account of scope. Those practices preserve the SRS intent while making the system technically credible and maintainable.
